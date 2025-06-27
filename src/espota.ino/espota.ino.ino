@@ -1,5 +1,5 @@
-#include <WiFi.h>         // For ESP32
-// #include <ESP8266WiFi.h>  // For ESP8266
+// #include <WiFi.h>         // For ESP32
+#include <ESP8266WiFi.h>  // For ESP8266
 #include <ArduinoOTA.h>   // OTA support
 
 const char* ap_ssid = "ESP-OTA-AP";
