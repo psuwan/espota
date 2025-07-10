@@ -28,7 +28,7 @@ bool eth_connected = false;
 void setupNetwork() {
   Serial.println("Starting network...");
 
-  // Event handling for ESP32 core 2.x+
+  // Start Ethernet
   WiFi.onEvent([](arduino_event_id_t event, arduino_event_info_t info) {
     switch (event) {
       case ARDUINO_EVENT_ETH_START:
@@ -47,60 +47,35 @@ void setupNetwork() {
         Serial.println("ETH Disconnected");
         eth_connected = false;
         break;
-      case ARDUINO_EVENT_ETH_STOP:
-        Serial.println("ETH Stopped");
-        eth_connected = false;
-        break;
       default:
         break;
     }
   });
 
-  // Try Ethernet
-  ETH.begin(
-    ETH_PHY_ADDR,
-    ETH_PHY_POWER,
-    ETH_MDC_PIN,
-    ETH_MDIO_PIN,
-    ETH_TYPE,
-    ETH_CLK_MODE
-  );
+  ETH.begin(ETH_PHY_ADDR, ETH_PHY_POWER, ETH_MDC_PIN, ETH_MDIO_PIN, ETH_TYPE, ETH_CLK_MODE);
+  delay(100);  // let ETH hardware settle
 
-  delay(100);
-  
-  // Static IP setup (default for non-DHCP network)
-  if (!ETH.config(DEFAULT_STATIC_IP, DEFAULT_GATEWAY, DEFAULT_SUBNET, DEFAULT_DNS)) {
-    Serial.println("⚠️  Failed to set static IP config");
+  // Set static IP for Ethernet
+  if (ETH.config(DEFAULT_STATIC_IP, DEFAULT_GATEWAY, DEFAULT_SUBNET, DEFAULT_DNS)) {
+    Serial.println("✅ Static IP configured");
   } else {
-    Serial.println("✅ Static IP configured:");
-    Serial.print("IP: "); Serial.println(DEFAULT_STATIC_IP);
-    Serial.print("Gateway: "); Serial.println(DEFAULT_GATEWAY);
-    Serial.print("Subnet: "); Serial.println(DEFAULT_SUBNET);
+    Serial.println("⚠️ Static IP config failed");
   }
 
-  // Wait briefly for Ethernet connection
-  unsigned long start = millis();
-  while (!eth_connected && millis() - start < 3000) {
-    delay(100);
-    Serial.print(".");
-  }
+  // Always start WiFi AP mode too (regardless of Ethernet)
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP(ssid, password);
+  Serial.print("WiFi AP started. IP: ");
+  Serial.println(WiFi.softAPIP());
 
-  // Fallback to WiFi AP if Ethernet is not connected
-  if (!eth_connected) {
-    Serial.println("\nEthernet not connected, starting WiFi AP...");
-    WiFi.mode(WIFI_AP);
-    WiFi.softAP(ssid, password);
-    Serial.print("WiFi AP IP: ");
-    Serial.println(WiFi.softAPIP());
-  }
-
-  // mDNS setup (works for both Ethernet and WiFi)
+  // mDNS for both interfaces
   if (MDNS.begin(hostname)) {
     Serial.println("mDNS responder started: " + String(hostname) + ".local");
   } else {
     Serial.println("Error starting mDNS");
   }
 }
+
 
 String getLocalIP() {
   return eth_connected ? ETH.localIP().toString() : WiFi.softAPIP().toString();

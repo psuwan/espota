@@ -14,4 +14,5 @@ void setup() {
 
 void loop() {
   handleOTA();         // Keep OTA responsive
+  getServer().handleClient();
 }
